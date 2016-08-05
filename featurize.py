@@ -15,11 +15,14 @@ def featurize_file(fname):
     Many special things are done since we are processing an Order Book
     1. Time is modified to be delta since last entry, since that matters most
     2. All dimensions are scaled by variable 'scaler' which is done to avoid large numbers in the features without losing scale information.
+    3. Three classes are made: down, flat and up based on market motion by 'thresh_motion' cents after 'thresh_time' seconds
     '''
     ### collect features
     num_features = 17
     scaler = [1.0, 1.0e5, 1.0e3, 1.0e5, 1.0e3, 1.0e5, 1.0e3, 1.0e5, 1.0e3, 
                    1.0e5, 1.0e3, 1.0e5, 1.0e3, 1.0e5, 1.0e3, 1.0e5, 1.0e3] 
+    thresh_motion = 50
+    thresh_time   = 300
 
     assert len(scaler)==num_features, 'len(scaler)!=num_features'
     day = []
@@ -45,33 +48,37 @@ def featurize_file(fname):
             
             ## make everything a float and scale it    
             line = map(float, line)
-            line = [line[i]/scaler[i] for i in range(num_features)]
             ## add to list 'day'
             day.append(line)
-    day = np.asarray(day)
 
     ### create labels
     ## based on 300 second future
     ## one-hot vector. [down, flat, up].
     ind      = 0
-    ind_60   = 0
-    tot_inds = day.shape[0]
-    labels = []
+    ind_fut  = 0
+    tot_inds = len(day)
+    labels   = []
     while ind < tot_inds:
         midpoint = 0.5*(day[ind][1] + day[ind][3])
-        while day[ind_60][0] < day[ind][0] + 300:
-            if ind_60 < tot_inds-1:
-                ind_60 += 1
+        while day[ind_fut][0] < day[ind][0] + thresh_time:
+            if ind_fut < tot_inds-1:
+                ind_fut += 1
             else:
                 break
-        midpoint_60 = 0.5*(day[ind_60][1] + day[ind_60][3])
-        if midpoint + 50 <= midpoint_60: # midpoint motion
-            labels.append([1, 0, 0])
-        elif midpoint - 50 >= midpoint_60: # midpoint motion
-            labels.append([0, 1, 0])
-        else:
+        midpoint_fut = 0.5*(day[ind_fut][1] + day[ind_fut][3])
+        if midpoint + thresh_motion <= midpoint_fut: # midpoint motion up
             labels.append([0, 0, 1])
+        elif midpoint - thresh_motion >= midpoint_fut: # midpoint motion down
+            labels.append([1, 0, 0])
+        else:
+            labels.append([0, 1, 0])
         ind += 1
+            
+    ### scale day
+    day = [[d[i]/scaler[i] for i in range(num_features)] for d in day]
+
+    ### map to numpy arrays
+    day = np.asarray(day)
     labels = np.asarray(labels)
     
     return day, labels
