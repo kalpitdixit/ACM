@@ -17,4 +17,5 @@ class Loader:
         for i in xrange(num_files):
             feats  = np.load(os.path.join(self.data_dir, 'feats{}.npy'.format(i)))
             labels = np.load(os.path.join(self.data_dir, 'labels{}.npy'.format(i)))
+            feats  = np.expand_dims(feats, 0)
             yield feats, labels
