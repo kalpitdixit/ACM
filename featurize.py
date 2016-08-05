@@ -85,8 +85,8 @@ if __name__=="__main__":
     
     for fname in fnames:
         feats, labels = featurize_file(fname)    
-        feats  = feats[:10].astype(DTYPE)
-        labels = labels[:10].astype(DTYPE)
+        feats  = feats.astype(DTYPE)
+        labels = labels.astype(DTYPE)
 
         ## save features files
         np.save(os.path.join(dest_data_dir, 'feats{}.npy'.format(count)), feats)
