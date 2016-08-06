@@ -21,7 +21,7 @@ class CFG:
     nodes = 5
     init = 'glorot_uniform'
     output_dim = 3
-    lr = 1e-3
+    lr = 1e-2
     use_LSTM = True
 
 def simple_LSTM_model(cfg=CFG()):
