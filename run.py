@@ -25,7 +25,7 @@ class CFG:
     nodes = 10
     init = 'glorot_uniform'
     output_dim = 3
-    lr = 1e-3
+    lr = 1e-2
     use_LSTM = True
     
     def save(self, save_dir):
@@ -95,15 +95,15 @@ def build_train_fn(model):
     return train_fn
 
 
-def get_run_id():
-    if os.path.isfile('run_id'):
-        with open('run_id', 'r') as f:  
-            run_id = 1 + int(f.readline())
+def get_job_id():
+    if os.path.isfile('job_id'):
+        with open('job_id', 'r') as f:  
+            job_id = 1 + int(f.readline())
     else:
-        run_id = 1
-    with open('run_id', 'w') as f:  
-        f.write(str(run_id))
-    return run_id
+        job_id = 1
+    with open('job_id', 'w') as f:  
+        f.write(str(job_id))
+    return job_id
 
 
 def get_accuracy(softmax_outputs, labels):
@@ -143,10 +143,10 @@ def get_confusion_matrix(softmax_outputs, labels):
     return conf_mat.astype(np.int32)
         
 
-def train(train_fn, dataset, run_dir, cfg=CFG()):
+def train(train_fn, dataset, job_dir, cfg=CFG()):
 
     # save config
-    cfg.save(run_dir)
+    cfg.save(job_dir)
     
     # train
     train_costs = []
@@ -163,8 +163,7 @@ def train(train_fn, dataset, run_dir, cfg=CFG()):
 
             # save metrics
             train_costs.append(cost)
-            np.save(os.path.join(run_dir, 'train_costs.npy'), train_costs)
-
+            np.save(os.path.join(job_dir, 'train_costs.npy'), train_costs)
     return
 
 
@@ -172,10 +171,10 @@ if __name__=="__main__":
     np.random.seed(1)
     random.seed(1)
 
-    # run_id
-    run_id = get_run_id()
-    run_dir = 'run_{}'.format(run_id)
-    os.system('mkdir '+run_dir)
+    # job_id and job_dir
+    job_id = get_job_id()
+    job_dir = 'job_{}'.format(job_id)
+    os.system('mkdir '+job_dir)
 
     # params
     cfg = CFG()
@@ -192,4 +191,4 @@ if __name__=="__main__":
 
     # Training Neural Network
     print '##### Training Neural Network #####'
-    train(train_fn, dataset, run_dir, cfg)
+    train(train_fn, dataset, job_dir, cfg)
