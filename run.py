@@ -20,10 +20,10 @@ class CFG:
     epochs = 20
     input_dim = 17
     recur_layers = 1
-    nodes = 5
+    nodes = 25
     init = 'glorot_uniform'
     output_dim = 3
-    lr = 1e-2
+    lr = 1e0
     use_LSTM = True
 
 
@@ -103,14 +103,32 @@ def get_accuracy(softmax_outputs, labels):
     return correct, total, accuracy
 
 
+def get_confusion_matrix(softmax_outputs, labels):
+    num_classes = labels.shape[1]
+    conf_mat = np.zeros((num_classes, num_classes)) # correct x predicted
+    pred_labels = np.argmax(softmax_outputs, axis=1)
+    labels = np.argmax(labels, axis=1)
+    
+    for i in range(num_classes):
+        for j in range(num_classes):
+            ind = labels==i
+            ind = pred_labels[ind]==j
+            conf_mat[i][j] = np.sum(ind)
+    
+    return conf_mat.astype(np.int32)
+        
+
 def train(train_fn, dataset, cfg=CFG()):
     for e in range(cfg.epochs):
         for i, (feats, labels, weights) in enumerate(dataset.iterate()):
 
             softmax_outputs, cost = train_fn([feats, labels, weights, True, cfg.lr])
             correct, total, accuracy = get_accuracy(softmax_outputs, labels)
+            conf_mat = get_confusion_matrix(softmax_outputs, labels)
 
             print 'Epochs: {}  Cost: {:.4f}  correct:{}  total:{}  accuracy:{}'.format(e, float(cost), correct, total, accuracy)
+            print conf_mat
+            print ''
 
     return
 
