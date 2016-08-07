@@ -15,6 +15,7 @@ from keras.backend import categorical_crossentropy
 import numpy as np
 import random
 import os
+import pickle
 
 
 class CFG:
@@ -26,6 +27,18 @@ class CFG:
     output_dim = 3
     lr = 1e-3
     use_LSTM = True
+    
+    def save(self, save_dir):
+        config_filename = os.path.join(save_dir, 'config.pkl')
+        with open(config_filename, 'w') as f:
+            pickle.dump(self.__dict__, f, 2)
+
+    def load(self, save_dir):
+        config_filename = os.path.join(save_dir, 'config.pkl')
+        if os.path.exists(config_filename):
+            with open(config_filename) as f:
+                obj = pickle.load(f)
+                self.__dict__.update(obj)
 
 
 def simple_LSTM_model(cfg=CFG()):
@@ -131,6 +144,11 @@ def get_confusion_matrix(softmax_outputs, labels):
         
 
 def train(train_fn, dataset, run_dir, cfg=CFG()):
+
+    # save config
+    cfg.save(run_dir)
+    
+    # train
     train_costs = []
     for e in range(cfg.epochs):
         for i, (feats, labels, weights) in enumerate(dataset.iterate()):
@@ -139,7 +157,7 @@ def train(train_fn, dataset, run_dir, cfg=CFG()):
             correct, total, accuracy = get_accuracy(softmax_outputs, labels)
             conf_mat = get_confusion_matrix(softmax_outputs, labels)
 
-            print 'Epochs: {}  Cost: {:.4f}  correct:{}  total:{}  accuracy:{}'.format(e, float(cost), correct, total, accuracy)
+            print 'Epoch: {}/{}  Cost: {:.4f}  correct:{}  total:{}  accuracy:{}'.format(e, cfg.epochs, float(cost), correct, total, accuracy)
             print conf_mat
             print ''
 
