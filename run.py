@@ -33,14 +33,13 @@ def simple_LSTM_model(cfg=CFG()):
             prev_layer = LSTM(cfg.nodes, name='lstm_{}'.format(r+1), init=cfg.init, return_sequences=True, consume_less='gpu')(prev_layer)
         else:
             prev_layer = SimpleRNN(cfg.nodes, name='lstm_{}'.format(r+1), init=cfg.init, return_sequences=True)(prev_layer)
-        last_rnn = prev_layer
         prev_layer = BatchNormalization(name='lstm_bn_{}'.format(r+1), mode=0, axis=2)(prev_layer)
         prev_layer = Activation('relu')(prev_layer)
 
     network_outputs = TimeDistributed(Dense(cfg.output_dim, name='network_outputs', init=cfg.init, activation='linear'))(prev_layer)
     raw_softmax_outputs = Activation('softmax')(network_outputs)
     
-    model = Model(input=ob_input, output=[raw_softmax_outputs])
+    model = Model(input=ob_input, output=raw_softmax_outputs)
 
     return model    
 
@@ -89,7 +88,10 @@ def get_accuracy(softmax_outputs, labels):
         ind = np.where(labels==c)[0]
         correct.append(np.sum(pred_labels[ind]==labels[ind]))
         total.append(labels[ind].shape[0])
-        accuracy.append(round(100.0*correct[-1]/total[-1],3)) 
+        if total[-1]>0:
+            accuracy.append(round(100.0*correct[-1]/total[-1],3)) 
+        else:
+            accuracy.append(round(-1.00,2))
 
     return correct, total, accuracy
 
