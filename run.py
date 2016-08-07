@@ -14,16 +14,17 @@ from keras.backend import categorical_crossentropy
 
 import numpy as np
 import random
+import os
 
 
 class CFG:
-    epochs = 20
+    epochs = 1000
     input_dim = 17
-    recur_layers = 1
-    nodes = 25
+    recur_layers = 3
+    nodes = 10
     init = 'glorot_uniform'
     output_dim = 3
-    lr = 1e0
+    lr = 1e-3
     use_LSTM = True
 
 
@@ -81,6 +82,17 @@ def build_train_fn(model):
     return train_fn
 
 
+def get_run_id():
+    if os.path.isfile('run_id'):
+        with open('run_id', 'r') as f:  
+            run_id = 1 + int(f.readline())
+    else:
+        run_id = 1
+    with open('run_id', 'w') as f:  
+        f.write(str(run_id))
+    return run_id
+
+
 def get_accuracy(softmax_outputs, labels):
     num_classes = labels.shape[1]
 
@@ -118,7 +130,8 @@ def get_confusion_matrix(softmax_outputs, labels):
     return conf_mat.astype(np.int32)
         
 
-def train(train_fn, dataset, cfg=CFG()):
+def train(train_fn, dataset, run_dir, cfg=CFG()):
+    train_costs = []
     for e in range(cfg.epochs):
         for i, (feats, labels, weights) in enumerate(dataset.iterate()):
 
@@ -130,6 +143,10 @@ def train(train_fn, dataset, cfg=CFG()):
             print conf_mat
             print ''
 
+            # save metrics
+            train_costs.append(cost)
+            np.save(os.path.join(run_dir, 'train_costs.npy'), train_costs)
+
     return
 
 
@@ -137,6 +154,12 @@ if __name__=="__main__":
     np.random.seed(1)
     random.seed(1)
 
+    # run_id
+    run_id = get_run_id()
+    run_dir = 'run_{}'.format(run_id)
+    os.system('mkdir '+run_dir)
+
+    # params
     cfg = CFG()
     train_data_dir = '/afs/.ir/users/k/a/kalpit/ACM_data/'
     dataset  = Loader(train_data_dir)
@@ -148,16 +171,7 @@ if __name__=="__main__":
     # Train Function
     print '##### Building Train Function #####'
     train_fn = build_train_fn(model) 
+
     # Training Neural Network
     print '##### Training Neural Network #####'
-    train(train_fn, dataset, cfg)
-
-
-
-
-
-
-
-
-
-
+    train(train_fn, dataset, run_dir, cfg)
