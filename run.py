@@ -8,11 +8,13 @@ from loader import Loader
 
 from keras.layers import Input, SimpleRNN, LSTM, Dense, TimeDistributed, BatchNormalization, Activation, Reshape, Flatten
 from keras.models import Model
+from keras.engine.training import weighted_objective
 
 from keras.backend import categorical_crossentropy
 
 import numpy as np
 import random
+
 
 class CFG:
     epochs = 20
@@ -23,6 +25,7 @@ class CFG:
     output_dim = 3
     lr = 1e-2
     use_LSTM = True
+
 
 def simple_LSTM_model(cfg=CFG()):
     ob_input = Input(shape=(None, cfg.input_dim), name='ob_input')
@@ -45,9 +48,11 @@ def simple_LSTM_model(cfg=CFG()):
 
 
 def build_train_fn(model):
-    # cost
+    ### cost
     lr = T.scalar()
-    labels = K.placeholder(ndim=2, dtype='int32')
+    labels  = K.placeholder(ndim=2, dtype='int32')
+    weights = K.placeholder(ndim=1, dtype='float32')
+
     ob_input = model.inputs[0]
     raw_softmax_outputs = model.outputs[0]
 
@@ -55,9 +60,11 @@ def build_train_fn(model):
     softmax_outputs = softmax_outputs.reshape((softmax_outputs.shape[0], softmax_outputs.shape[1]*softmax_outputs.shape[2]))
     softmax_outputs = softmax_outputs.dimshuffle((1,0))
 
-    cost = categorical_crossentropy(softmax_outputs, labels).mean()
+    #cost = categorical_crossentropy(softmax_outputs, labels).mean()
+    wcc = weighted_objective(categorical_crossentropy)
+    cost = wcc(softmax_outputs, labels, weights).mean()
 
-    # gradients
+    ### gradients
     trainable_vars = model.trainable_weights
     grads = K.gradients(cost, trainable_vars)
     grads = lasagne.updates.total_norm_constraint(grads, 100)
@@ -66,8 +73,8 @@ def build_train_fn(model):
     for key, val in model.updates:                              
         updates[key] = val
 
-    # train_fn
-    train_fn = K.function([ob_input, labels, K.learning_phase(), lr],
+    ### train_fn
+    train_fn = K.function([ob_input, labels, weights, K.learning_phase(), lr],
                           [softmax_outputs, cost],
                           updates=updates)
 
@@ -98,9 +105,9 @@ def get_accuracy(softmax_outputs, labels):
 
 def train(train_fn, dataset, cfg=CFG()):
     for e in range(cfg.epochs):
-        for i, (feats, labels) in enumerate(dataset.iterate()):
+        for i, (feats, labels, weights) in enumerate(dataset.iterate()):
 
-            softmax_outputs, cost = train_fn([feats, labels, True, cfg.lr])
+            softmax_outputs, cost = train_fn([feats, labels, weights, True, cfg.lr])
             correct, total, accuracy = get_accuracy(softmax_outputs, labels)
 
             print 'Epochs: {}  Cost: {:.4f}  correct:{}  total:{}  accuracy:{}'.format(e, float(cost), correct, total, accuracy)

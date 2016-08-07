@@ -88,19 +88,37 @@ if __name__=="__main__":
     
     dest_data_dir = '/afs/.ir/users/k/a/kalpit/ACM_data'
     fnames = glob.glob('/afs/.ir/users/k/a/kalpit/ACM_raw_data/*csv')
-    count = 0
     
+    ### Features and Labels
+    class_counts = np.zeros((3,)) # 3 x 1
+    count = 0
     for fname in fnames:
         feats, labels = featurize_file(fname)    
         feats  = feats.astype(DTYPE)
         labels = labels.astype(DTYPE)
 
-        ## save features files
+        ## update class_counts
+        class_counts += np.sum(labels, axis=0)
+
+        ## save feature nad labels files
         np.save(os.path.join(dest_data_dir, 'feats{}.npy'.format(count)), feats)
         np.save(os.path.join(dest_data_dir, 'labels{}.npy'.format(count)), labels)
+
         count += 1
     
-    # num_files
+    ### Weights
+    class_weights = np.sum(class_counts) / class_counts / class_counts.shape[0]
+    count = 0
+    for fname in fnames:
+        labels  = np.load(os.path.join(dest_data_dir, 'labels{}.npy'.format(count))) # m x 3
+        weights = np.dot(labels, class_weights) # m x 1
+
+        ## save weights file
+        np.save(os.path.join(dest_data_dir, 'weights{}.npy'.format(count)), weights)
+            
+        count += 1
+
+    ### num_files
     with open(os.path.join(dest_data_dir, 'num_files'), 'w') as f:
         f.write(str(count))
 
