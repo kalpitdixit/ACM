@@ -115,11 +115,12 @@ if __name__=="__main__":
         count += 1
     
     ### Weights
-    class_weights = np.sum(class_counts) / class_counts / class_counts.shape[0]
+    class_weights = np.sum(class_counts) / (class_counts + (class_counts==0)) / class_counts.shape[0]
     count = 0
     for fname in fnames:
         labels  = np.load(os.path.join(dest_data_dir, 'labels{}.npy'.format(count))) # m x 3
         weights = np.dot(labels, class_weights) # m x 1
+        weights = weights.astype(DTYPE)
 
         ## save weights file
         np.save(os.path.join(dest_data_dir, 'weights{}.npy'.format(count)), weights)
